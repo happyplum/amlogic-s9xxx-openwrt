@@ -12,7 +12,7 @@ on:
       source_branch:
         description: "Select the source branch"
         required: false
-        default: "official"
+        default: "lede"
         type: choice
         options:
           - official
@@ -21,7 +21,7 @@ on:
       openwrt_board:
         description: "Select device board"
         required: false
-        default: "all"
+        default: "r68s"
         type: choice
         options:
           - all
@@ -202,7 +202,7 @@ on:
       kernel_usage:
         description: "Set the tags of the stable kernel."
         required: false
-        default: "stable"
+        default: "flippy"
         type: choice
         options:
           - stable
@@ -225,7 +225,7 @@ on:
         options:
           - ophub
           - angel
-          - yourname
+          - plum
 
 env:
   TZ: America/New_York
@@ -279,7 +279,7 @@ jobs:
           sudo chown -R runner.runner /builder
           df -Th
 
-      - name: Download OpenWrt [ ${{ inputs.source_branch }} ]
+      - name: Download OpenWrt [ ${{ inputs.source_branch || 'lede'}} ]
         id: down
         working-directory: /builder
         if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
@@ -312,7 +312,7 @@ jobs:
                               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                               https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=100 |
                               jq '.[]' |
-                              jq -s --arg RTK "OpenWrt_${{ inputs.source_branch }}_" '.[] | select(.tag_name | contains($RTK))' |
+                              jq -s --arg RTK "OpenWrt_${{ inputs.source_branch || 'lede' }}_" '.[] | select(.tag_name | contains($RTK))' |
                               jq -s '.[].assets[] | {data:.updated_at, url:.browser_download_url}' |
                               jq -s --arg BOARD "-rootfs.tar.gz" '.[] | select(.url | endswith($BOARD))' |
                               jq -s 'sort_by(.data)|reverse[]' |
@@ -327,7 +327,7 @@ jobs:
           curl -fsSL "${latest_url}" -o "${armvirt_tarfile_path}/${openwrt_filename}"
           [[ "${?}" -ne "0" ]] && echo "Invalid OpenWrt rootfs download address." && exit 1
 
-          echo "build_tag=OpenWrt_${{ inputs.source_branch }}_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_OUTPUT}
+          echo "build_tag=OpenWrt_${{ inputs.source_branch || 'lede' }}_${{ inputs.openwrt_storage || 'save' }}_$(date +"%Y.%m")" >> ${GITHUB_OUTPUT}
           df -hT ${PWD}
           echo "REPO_URL=${REPO_URL}" >> ${GITHUB_OUTPUT}
           echo "TAGS_NAME=${TAGS_NAME}" >> ${GITHUB_OUTPUT}
@@ -338,12 +338,13 @@ jobs:
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
           openwrt_path: openwrt/output/*rootfs.tar.gz
-          openwrt_board: ${{ inputs.openwrt_board }}
-          openwrt_kernel: ${{ inputs.openwrt_kernel }}
-          auto_kernel: ${{ inputs.auto_kernel }}
-          kernel_repo: ${{ inputs.kernel_repo }}
-          kernel_usage: ${{ inputs.kernel_usage }}
-          builder_name: ${{ inputs.builder_name }}
+          openwrt_board: ${{ inputs.openwrt_board || 'r68s' }}
+          openwrt_kernel: ${{ inputs.openwrt_kernel || '5.15.1_6.1.1' }}
+          auto_kernel: ${{ inputs.auto_kernel || true }}
+          kernel_repo: ${{ inputs.kernel_repo || 'ophub/kernel' }}
+          kernel_usage: ${{ inputs.kernel_usage || 'flippy' }}
+          builder_name: ${{ inputs.builder_name || 'plum' }}
+          gh_token: ${{ secrets.GH_TOKEN }}
 
       - name: Upload the packaged OpenWrt
         uses: ncipollo/release-action@main
