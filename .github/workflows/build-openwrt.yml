@@ -226,7 +226,8 @@ on:
           - ophub
           - angel
           - plum
-
+  schedule:
+    - cron: 10 16 * * *
 env:
   FEEDS_CONF: config/${{ inputs.source_branch || 'lede-master' }}/feeds.conf.default
   CONFIG_FILE: config/${{ inputs.source_branch || 'lede-master' }}/config
