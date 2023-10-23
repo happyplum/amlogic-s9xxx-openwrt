@@ -74,8 +74,9 @@ on:
         type: choice
         options:
           - -ophub
-          - -yourname
-
+          - -plum
+  schedule:
+    - cron: 10 16 * * *
 env:
   TZ: America/New_York
 
@@ -144,13 +145,13 @@ jobs:
         if: ${{ steps.mapped.outputs.status }} == 'success' && !cancelled()
         with:
           build_target: kernel
-          kernel_source: ${{ inputs.kernel_source }}
-          kernel_version: ${{ inputs.kernel_version }}
-          kernel_auto: ${{ inputs.kernel_auto }}
-          kernel_package: ${{ inputs.kernel_package }}
-          kernel_sign: ${{ inputs.kernel_sign }}
-          kernel_toolchain: ${{ inputs.kernel_toolchain }}
-          compress_format: ${{ inputs.compress_format }}
+          kernel_source: ${{ inputs.kernel_source || 'unifreq' }}
+          kernel_version: ${{ inputs.kernel_version || '5.15.85_6.1.1' }}
+          kernel_auto: ${{ inputs.kernel_auto || true }}
+          kernel_package: ${{ inputs.kernel_package || 'all' }}
+          kernel_sign: ${{ inputs.kernel_sign || '-plum' }}
+          kernel_toolchain: ${{ inputs.kernel_toolchain || 'gcc' }}
+          compress_format: ${{ inputs.compress_format || 'xz' }}
 
       - name: Upload Kernel to Release
         uses: ncipollo/release-action@main
@@ -162,5 +163,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
             The kernel can be used to compile Armbian and OpenWrt.
-            The kernel source code comes from: ${{ inputs.kernel_source }}
-            The kernel compilation toolchain: ${{ inputs.kernel_toolchain }}
+            The kernel source code comes from: ${{ inputs.kernel_source || 'unifreq' }}
+            The kernel compilation toolchain: ${{ inputs.kernel_toolchain || 'gcc' }}
