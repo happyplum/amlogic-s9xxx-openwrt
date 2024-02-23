@@ -70,8 +70,8 @@ on:
         options:
           - -ophub
           - -plum
-  schedule:
-    - cron: 10 16 * * *
+  # schedule:
+  #   - cron: 10 16 * * *
 env:
   TZ: America/New_York
 
