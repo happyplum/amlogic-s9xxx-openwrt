@@ -150,7 +150,7 @@ jobs:
           sudo newgrp docker
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Pull Docker Image [ ${{ inputs.docker_image }} ]
+      - name: Pull Docker Image [ ${{ inputs.docker_image || 'trixie' }} ]
         id: pull
         working-directory: /builder
         if: ${{ steps.install.outputs.status }} == 'success' && !cancelled()
@@ -169,7 +169,7 @@ jobs:
               -v /etc/timezone:/etc/timezone:ro \
               -e CCACHE_DIR=/root/.ccache \
               --restart=always \
-              ophub/armbian-${{ inputs.docker_image }}:arm64
+              ophub/armbian-${{ inputs.docker_image || 'trixie' }}:arm64
 
           echo "status=success" >> ${GITHUB_OUTPUT}
 
@@ -178,7 +178,7 @@ jobs:
         if: ${{ steps.pull.outputs.status }} == 'success' && !cancelled()
         run: |
           # Get the latest source hash from the kernel repository
-          api_url="https://api.github.com/repos/${{ inputs.kernel_source }}/linux-${{ inputs.kernel_version }}/git/ref/heads/main"
+          api_url="https://api.github.com/repos/${{ inputs.kernel_source || 'unifreq' }}/linux-${{ inputs.kernel_version || '6.12.y' }}/git/ref/heads/main"
           source_hash=$(curl -fsSL -m 20 \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
@@ -193,23 +193,22 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /builder/ccache
-          key: kernel-${{ inputs.kernel_toolchain }}-${{ inputs.kernel_version }}-${{ env.source_hash }}
+          key: kernel-${{ inputs.kernel_toolchain || 'gcc' }}-${{ inputs.kernel_version || '6.12.y' }}-${{ env.source_hash }}
           restore-keys: |
-            kernel-${{ inputs.kernel_toolchain }}-${{ inputs.kernel_version }}-
+            kernel-${{ inputs.kernel_toolchain || 'gcc' }}-${{ inputs.kernel_version || '6.12.y' }}-
 
-      - name: Compile the kernel [ ${{ inputs.kernel_version }} ]
+      - name: Compile the kernel [ ${{ inputs.kernel_version || '6.12.y' }} ]
         uses: ophub/amlogic-s9xxx-armbian@main
         if: ${{ steps.pull.outputs.status }} == 'success' && !cancelled()
         with:
           build_target: kernel
-          kernel_source: ${{ inputs.kernel_source }}
-          kernel_version: ${{ inputs.kernel_version }}
-          kernel_auto: ${{ inputs.kernel_auto }}
-          delete_source: ${{ inputs.delete_source }}
-          kernel_package: ${{ inputs.kernel_package }}
-          kernel_sign: ${{ inputs.kernel_sign }}
-          kernel_toolchain: ${{ inputs.kernel_toolchain }}
-          ccache_clear: ${{ inputs.ccache_clear }}
+          kernel_source: ${{ inputs.kernel_source || 'unifreq' }}
+          kernel_version: ${{ inputs.kernel_version || '6.12.y' }}
+          kernel_auto: ${{ inputs.kernel_auto || true }}
+          delete_source: ${{ inputs.delete_source || true }}
+          kernel_package: ${{ inputs.kernel_package || 'all' }}
+          kernel_sign: ${{ inputs.kernel_sign || '-plum' }}
+          kernel_toolchain: ${{ inputs.kernel_toolchain || 'gcc' }}
 
       - name: Upload Kernel to Release
         uses: ncipollo/release-action@main
