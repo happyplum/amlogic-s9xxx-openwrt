@@ -79,7 +79,7 @@ on:
         type: choice
         options:
           - -ophub
-          - -yourname
+          - -plum
 
 env:
   TZ: Etc/UTC
