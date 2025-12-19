@@ -257,10 +257,10 @@ on:
           - plum
 
 env:
-  FEEDS_CONF: config/${{ inputs.source_branch }}/feeds.conf.default
-  CONFIG_FILE: config/${{ inputs.source_branch }}/config
-  DIY_P1_SH: config/${{ inputs.source_branch }}/diy-part1.sh
-  DIY_P2_SH: config/${{ inputs.source_branch }}/diy-part2.sh
+  FEEDS_CONF: config/${{ inputs.source_branch || 'immortalwrt_master'  }}/feeds.conf.default
+  CONFIG_FILE: config/${{ inputs.source_branch || 'immortalwrt_master'  }}/config
+  DIY_P1_SH: config/${{ inputs.source_branch || 'immortalwrt_master'  }}/diy-part1.sh
+  DIY_P2_SH: config/${{ inputs.source_branch || 'immortalwrt_master'  }}/diy-part2.sh
   TZ: Etc/UTC
   CCACHE_DIR: /builder/openwrt/.ccache
 
@@ -321,7 +321,7 @@ jobs:
           df -Th
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Clone source code [ ${{ inputs.source_branch }} ]
+      - name: Clone source code [ ${{ inputs.source_branch || 'lede-master' }} ]
         id: codes
         working-directory: /builder
         if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
@@ -337,7 +337,7 @@ jobs:
               echo "Unknown source code repository."
               exit 1
           fi
-          source_branch_input="${{ inputs.source_branch }}"
+          source_branch_input="${{ inputs.source_branch || 'immortalwrt_master' }}"
           REPO_NAME="${source_branch_input%_*}"
           REPO_BRANCH="${source_branch_input##*_}"
 
@@ -347,7 +347,7 @@ jobs:
           ln -sf /builder/openwrt /home/runner/work/_actions/ophub/amlogic-s9xxx-openwrt/main/openwrt
 
           # Set output information
-          echo "build_tag=OpenWrt_${{ inputs.source_branch }}_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+          echo "build_tag=OpenWrt_${{ inputs.source_branch || 'immortalwrt_master' }}_${{ inputs.openwrt_storage || 'save' }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
           echo -e "REPO_URL: [ ${REPO_URL} ]\nREPO_BRANCH: [ ${REPO_BRANCH} ]\nREPO_NAME: [ ${REPO_NAME} ]"
           df -hT ${PWD}
           echo "REPO_URL=${REPO_URL}" >> ${GITHUB_ENV}
@@ -374,7 +374,7 @@ jobs:
           [[ -e "${CONFIG_FILE}" ]] && cp -f ${CONFIG_FILE} openwrt/.config
           chmod +x ${DIY_P2_SH}
           cd openwrt/
-          ${{ github.workspace }}/${DIY_P2_SH} "${{ inputs.openwrt_ip }}" "${{ inputs.use_ccache }}"
+          ${{ github.workspace }}/${DIY_P2_SH} "${{ inputs.openwrt_ip || '192.168.7.1' }}" "${{ inputs.use_ccache || true }}"
 
       - name: Download package
         id: package
@@ -456,13 +456,13 @@ jobs:
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
           openwrt_path: openwrt/output/*rootfs.tar.gz
-          openwrt_ip: ${{ inputs.openwrt_ip }}
-          openwrt_board: ${{ inputs.openwrt_board }}
-          openwrt_kernel: ${{ inputs.openwrt_kernel }}
-          auto_kernel: ${{ inputs.auto_kernel }}
-          kernel_repo: ${{ inputs.kernel_repo }}
-          kernel_usage: ${{ inputs.kernel_usage }}
-          builder_name: ${{ inputs.builder_name }}
+          openwrt_ip: ${{ inputs.openwrt_ip || '192.168.7.1' }}
+          openwrt_board: ${{ inputs.openwrt_board || 'r68s' }}
+          openwrt_kernel: ${{ inputs.openwrt_kernel || '6.12.y' }}
+          auto_kernel: ${{ inputs.auto_kernel || true }}
+          kernel_repo: ${{ inputs.kernel_repo || 'ophub/kernel' }}
+          kernel_usage: ${{ inputs.kernel_usage || 'flippy' }}
+          builder_name: ${{ inputs.builder_name || 'plum' }}
 
       - name: Upload the packaged OpenWrt
         uses: ncipollo/release-action@main

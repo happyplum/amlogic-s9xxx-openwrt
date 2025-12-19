@@ -308,23 +308,23 @@ jobs:
           df -Th
           echo "status=success" >> ${GITHUB_OUTPUT}
 
-      - name: Download OpenWrt [ ${{ inputs.source_branch }} ]
+      - name: Download OpenWrt [ ${{ inputs.source_branch || 'lede_master'}} ]
         id: down
         working-directory: /builder
         if: ${{ steps.init.outputs.status }} == 'success' && !cancelled()
         run: |
           # Set up compilation source code
-          if [[ "${{ inputs.source_branch }}" =~ ^openwrt ]]; then
+          if [[ "${{ inputs.source_branch || 'lede_master' }}" =~ ^openwrt ]]; then
               REPO_URL="https://github.com/openwrt/openwrt"
-          elif [[ "${{ inputs.source_branch }}" =~ ^lede ]]; then
+          elif [[ "${{ inputs.source_branch || 'lede_master' }}" =~ ^lede ]]; then
               REPO_URL="https://github.com/coolsnowwolf/lede"
-          elif [[ "${{ inputs.source_branch }}" =~ ^immortalwrt ]]; then
+          elif [[ "${{ inputs.source_branch || 'lede_master' }}" =~ ^immortalwrt ]]; then
               REPO_URL="https://github.com/immortalwrt/immortalwrt"
           else
               echo "Unknown source code repository."
               exit 1
           fi
-          source_branch_input="${{ inputs.source_branch }}"
+          source_branch_input="${{ inputs.source_branch || 'immortalwrt_master' }}"
           REPO_NAME="${source_branch_input%_*}"
           REPO_BRANCH="${source_branch_input##*_}"
 
@@ -338,7 +338,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
               https://api.github.com/repos/${{ github.repository }}/releases?per_page=20 | \
-              jq -r --arg RTK "OpenWrt_${{ inputs.source_branch }}_" \
+              jq -r --arg RTK "OpenWrt_${{ inputs.source_branch || 'immortalwrt_master' }}_" \
               --arg BOARD "-rootfs.tar.gz" \
               '[.[] | select(.tag_name | contains($RTK))] |
               map(.assets[] | select(.name | endswith($BOARD))) |
@@ -365,7 +365,7 @@ jobs:
                -o "${armsr_tarfile_path}/${openwrt_filename}"
           [[ "${?}" -ne "0" ]] && echo "Download failed." && exit 1
 
-          echo "build_tag=OpenWrt_${{ inputs.source_branch }}_${{ inputs.openwrt_storage }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
+          echo "build_tag=OpenWrt_${{ inputs.source_branch || 'immortalwrt_master' }}_${{ inputs.openwrt_storage || 'save' }}_$(date +"%Y.%m")" >> ${GITHUB_ENV}
           df -hT ${PWD}
           echo "REPO_URL=${REPO_URL}" >> ${GITHUB_ENV}
           echo "REPO_NAME=${REPO_NAME}" >> ${GITHUB_ENV}
@@ -377,13 +377,13 @@ jobs:
         uses: ophub/amlogic-s9xxx-openwrt@main
         with:
           openwrt_path: openwrt/output/*rootfs.tar.gz
-          openwrt_ip: ${{ inputs.openwrt_ip }}
-          openwrt_board: ${{ inputs.openwrt_board }}
-          openwrt_kernel: ${{ inputs.openwrt_kernel }}
-          auto_kernel: ${{ inputs.auto_kernel }}
-          kernel_repo: ${{ inputs.kernel_repo }}
-          kernel_usage: ${{ inputs.kernel_usage }}
-          builder_name: ${{ inputs.builder_name }}
+          openwrt_ip: ${{ inputs.openwrt_ip || '192.168.7.1' }}
+          openwrt_board: ${{ inputs.openwrt_board || 'r68s' }}
+          openwrt_kernel: ${{ inputs.openwrt_kernel || '6.1.y_6.12.y' }}
+          auto_kernel: ${{ inputs.auto_kernel || true }}
+          kernel_repo: ${{ inputs.kernel_repo || 'ophub/kernel' }}
+          kernel_usage: ${{ inputs.kernel_usage || 'flippy' }}
+          builder_name: ${{ inputs.builder_name || 'plum' }}
 
       - name: Upload the packaged OpenWrt
         uses: ncipollo/release-action@main
